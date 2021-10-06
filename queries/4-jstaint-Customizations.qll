@@ -1,0 +1,33 @@
+/**
+ * Contains customizations to the standard library.
+ *
+ * This module is imported by `javascript.qll`, so any customizations defined here automatically
+ * apply to all queries.
+ *
+ * Typical examples of customizations include adding new subclasses of abstract classes such as
+ * `FileSystemAccess`, or the `Source` and `Sink` classes associated with the security queries
+ * to model frameworks that are not covered by the standard library.
+ */
+
+import javascript
+import semmle.javascript.dataflow.TaintTracking
+// import semmle.javascript.dataflow.DataFlow
+
+predicate reqWrite(HTTP::Servers::RequestSource req, DataFlow::Node rhs, string path) {
+    rhs = AccessPath::getAnAssignmentTo(req, path)
+}
+
+predicate reqRead(HTTP::Servers::RequestSource req, DataFlow::Node var, string path) {
+    var = AccessPath::getAReferenceTo(req, path)
+}
+
+predicate reqStep(DataFlow::Node pred, DataFlow::Node succ, string path) {
+    reqWrite(_, pred, path) and
+    reqRead(_, succ, path)
+}
+
+class ReqRWTaintStep extends TaintTracking::SharedTaintStep {
+    override predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+        reqStep(pred, succ, _)
+    }
+}
